@@ -6,27 +6,65 @@ import { KineticHeading } from "@/components/KineticHeading/KineticHeading";
 import { WALLPAPER_INTRO, WALLPAPER_PATTERNS } from "@/lib/site";
 import styles from "./WallpaperUnroll.module.scss";
 
-const PANEL_X = [40, 420, 800];
-const PANEL_W = 360;
-const PANEL_Y = 40;
-const PANEL_H = 620;
+/** Drawn once per panel into its own <defs>, so the ids stay unique. */
+function PatternTile({ id }: { id: string }) {
+  if (id === "reed") {
+    return (
+      <path d="M3 0V14M10 0V14" className={styles.ink} strokeWidth="1" />
+    );
+  }
+  if (id === "woven-grid") {
+    return (
+      <path
+        d="M0 24H48M24 0V48M12 12H36V36H12Z"
+        className={styles.ink}
+        strokeWidth="1.1"
+      />
+    );
+  }
+  return (
+    <g className={styles.ink} strokeWidth="1.1">
+      <circle cx="45" cy="45" r="7" />
+      {[0, 45, 90, 135].map((angle) => (
+        <ellipse
+          key={angle}
+          cx="45"
+          cy="45"
+          rx="26"
+          ry="9"
+          transform={`rotate(${angle} 45 45)`}
+        />
+      ))}
+    </g>
+  );
+}
+
+const TILE = {
+  reed: 14,
+  "woven-grid": 48,
+  protea: 90,
+} as const;
 
 /**
- * A bare wall frame pins, then three vector masks unroll top to bottom,
- * printing the house patterns onto the surface as a light sweep travels across
- * them.
+ * Three bare wall panels pin, then vector masks unroll top to bottom, printing
+ * the house patterns onto them as a light sweep travels across.
  *
- * The patterns are authored as SVG `<pattern>` tiles rather than photographed:
- * they are line work, so vector keeps them crisp at any viewport, weighs a few
- * hundred bytes, and recolours from the same tokens as the rest of the page.
+ * Each panel is its own <svg> in a grid that shares its column template with
+ * the legend, so a swatch always sits directly above its own name. A single
+ * SVG spanning all three would letterbox inside the frame — `meet` fits by
+ * height and centres — leaving the panels floating in the middle of a
+ * full-width legend.
  *
- * Masks are driven with scaleY on a transform-box of their own fill box, which
- * stays on the compositor. Animating the rect's `height` would re-rasterise the
- * mask every frame.
+ * The patterns are drawn rather than photographed: they are line work, so
+ * vector stays crisp at any size, weighs a few hundred bytes, and recolours
+ * from the same tokens as everything else.
+ *
+ * Masks are driven with scaleY, which stays on the compositor. Animating the
+ * rect's `height` would re-rasterise the mask every frame.
  */
 export function WallpaperUnroll() {
   const root = useRef<HTMLDivElement>(null);
-  const scene = useRef<SVGSVGElement>(null);
+  const wall = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -38,11 +76,11 @@ export function WallpaperUnroll() {
           reduced: "(prefers-reduced-motion: reduce)",
         },
         (context) => {
-          const svg = scene.current;
-          if (!svg) return;
+          const scope = wall.current;
+          if (!scope) return;
 
-          const masks = svg.querySelectorAll<SVGRectElement>("[data-mask]");
-          const sweep = svg.querySelector<SVGRectElement>("[data-sweep]");
+          const masks = scope.querySelectorAll<SVGRectElement>("[data-mask]");
+          const sweep = scope.querySelector<HTMLElement>("[data-sweep]");
 
           if (context.conditions?.reduced) {
             gsap.set(masks, { scaleY: 1 });
@@ -65,7 +103,15 @@ export function WallpaperUnroll() {
           tl.fromTo(
             masks,
             { scaleY: 0 },
-            { scaleY: 1, ease: "none", stagger: 0.18 },
+            {
+              scaleY: 1,
+              ease: "none",
+              stagger: 0.18,
+              // Explicit, rather than relying on CSS transform-origin: the
+              // resolved origin for an SVG element depends on transform-box,
+              // which browsers do not agree on.
+              svgOrigin: "0 0",
+            },
             0,
           ).fromTo(
             sweep,
@@ -89,124 +135,67 @@ export function WallpaperUnroll() {
         <p className={styles.body}>{WALLPAPER_INTRO.body}</p>
       </div>
 
-      <div className={styles.wall}>
-        <svg
-          ref={scene}
-          className={styles.scene}
-          viewBox="0 0 1200 700"
-          preserveAspectRatio="xMidYMid meet"
-          role="img"
-          aria-label={`Three wallpaper patterns unrolling onto a bare wall: ${WALLPAPER_PATTERNS.map((p) => p.name).join(", ")}`}
-        >
-          <defs>
-            {/* Reed — fine vertical rule, the quietest of the three. */}
-            <pattern
-              id="adi-reed"
-              width="14"
-              height="14"
-              patternUnits="userSpaceOnUse"
-            >
-              <path d="M3 0V14M10 0V14" className={styles.ink} strokeWidth="1" />
-            </pattern>
+      <div ref={wall} className={styles.wall}>
+        <ul className={styles.panels}>
+          {WALLPAPER_PATTERNS.map((pattern) => {
+            const tile = TILE[pattern.id as keyof typeof TILE];
+            return (
+              <li key={pattern.id} className={styles.panel}>
+                <svg
+                  className={styles.sheet}
+                  viewBox="0 0 400 600"
+                  // `slice` fills the panel and crops, like paper hung on a
+                  // wall. `meet` would letterbox and float the sheet.
+                  preserveAspectRatio="xMidYMid slice"
+                  role="img"
+                  aria-label={`${pattern.name} wallpaper — ${pattern.note}`}
+                >
+                  <defs>
+                    <pattern
+                      id={`adi-tile-${pattern.id}`}
+                      width={tile}
+                      height={tile}
+                      patternUnits="userSpaceOnUse"
+                    >
+                      <PatternTile id={pattern.id} />
+                    </pattern>
+                    <mask id={`adi-mask-${pattern.id}`}>
+                      <rect
+                        data-mask
+                        x="0"
+                        y="0"
+                        width="400"
+                        height="600"
+                        fill="#fff"
+                      />
+                    </mask>
+                  </defs>
 
-            {/* Woven grid — interlocking squares on a half-drop repeat. */}
-            <pattern
-              id="adi-grid"
-              width="48"
-              height="48"
-              patternUnits="userSpaceOnUse"
-            >
-              <path
-                d="M0 24H48M24 0V48M12 12H36V36H12Z"
-                className={styles.ink}
-                strokeWidth="1.1"
-              />
-            </pattern>
+                  <g mask={`url(#adi-mask-${pattern.id})`}>
+                    <rect
+                      x="0"
+                      y="0"
+                      width="400"
+                      height="600"
+                      className={styles.ground}
+                    />
+                    <rect
+                      x="0"
+                      y="0"
+                      width="400"
+                      height="600"
+                      fill={`url(#adi-tile-${pattern.id})`}
+                    />
+                  </g>
+                </svg>
+              </li>
+            );
+          })}
 
-            {/* Protea — a stylised rosette, wide repeat. */}
-            <pattern
-              id="adi-protea"
-              width="90"
-              height="90"
-              patternUnits="userSpaceOnUse"
-            >
-              <g className={styles.ink} strokeWidth="1.1">
-                <circle cx="45" cy="45" r="7" />
-                {[0, 45, 90, 135].map((angle) => (
-                  <ellipse
-                    key={angle}
-                    cx="45"
-                    cy="45"
-                    rx="26"
-                    ry="9"
-                    transform={`rotate(${angle} 45 45)`}
-                  />
-                ))}
-              </g>
-            </pattern>
-
-            <linearGradient id="adi-sweep" x1="0" x2="1" y1="0" y2="0">
-              <stop offset="0%" stopColor="#fff" stopOpacity="0" />
-              <stop offset="50%" stopColor="#fff" stopOpacity="0.55" />
-              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
-            </linearGradient>
-
-            {PANEL_X.map((x, i) => (
-              <mask key={x} id={`adi-unroll-${i}`}>
-                <rect
-                  data-mask
-                  x={x}
-                  y={PANEL_Y}
-                  width={PANEL_W}
-                  height={PANEL_H}
-                  fill="#fff"
-                  style={{ transformOrigin: `${x}px ${PANEL_Y}px` }}
-                />
-              </mask>
-            ))}
-          </defs>
-
-          {/* Bare wall: the frame is drawn, never shaded. */}
-          {PANEL_X.map((x) => (
-            <rect
-              key={`frame-${x}`}
-              x={x}
-              y={PANEL_Y}
-              width={PANEL_W}
-              height={PANEL_H}
-              className={styles.frame}
-            />
-          ))}
-
-          {WALLPAPER_PATTERNS.map((pattern, i) => (
-            <g key={pattern.id} mask={`url(#adi-unroll-${i})`}>
-              <rect
-                x={PANEL_X[i]}
-                y={PANEL_Y}
-                width={PANEL_W}
-                height={PANEL_H}
-                className={styles.ground}
-              />
-              <rect
-                x={PANEL_X[i]}
-                y={PANEL_Y}
-                width={PANEL_W}
-                height={PANEL_H}
-                fill={`url(#adi-${["reed", "grid", "protea"][i]})`}
-              />
-            </g>
-          ))}
-
-          <rect
-            data-sweep
-            x="0"
-            y={PANEL_Y}
-            width="240"
-            height={PANEL_H}
-            fill="url(#adi-sweep)"
-            className={styles.sweep}
-          />
-        </svg>
+          {/* One sweep across the whole wall rather than three, so the light
+              reads as a single source crossing the room. */}
+          <span data-sweep className={styles.sweep} aria-hidden="true" />
+        </ul>
 
         <ul className={styles.legend}>
           {WALLPAPER_PATTERNS.map((pattern) => (

@@ -15,11 +15,12 @@
   display: grid;
   flex-shrink: 0;
   grid-template-columns: 1fr;
-  gap: 0.75rem 4rem;
-  padding-bottom: clamp(1rem, 3vh, 2rem);
-  @include mix.below-header;
+  gap: 0.5rem 4rem;
+  padding-bottom: clamp(0.5rem, 2vh, 2rem);
+  @include mix.below-header(clamp(0.5rem, 2vh, 1.75rem));
 
   @include mix.from(vars.$bp-tablet) {
+    gap: 0.75rem 4rem;
     grid-template-columns: 1fr 1fr;
     align-items: end;
   }
@@ -39,9 +40,13 @@
   color: vars.$color-stone-muted;
   @include mix.body-editorial;
 
+  font-size: clamp(0.8rem, 3.4vw, 1.125rem);
+  line-height: 1.6;
+
   @include mix.from(vars.$bp-tablet) {
     grid-row: 1 / span 2;
     grid-column: 2;
+    line-height: 1.8;
   }
 }
 
@@ -51,31 +56,45 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 1rem;
+  gap: clamp(0.75rem, 2vh, 1.5rem);
   min-height: 0;
-  padding-bottom: clamp(1.5rem, 5vh, 3rem);
+  padding-bottom: clamp(1rem, 4vh, 3rem);
 }
 
-.scene {
+// The panels and the legend share one column template. That is the whole point
+// of the grid: a swatch has to sit directly above its own name.
+.panels,
+.legend {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(0.75rem, 2.5vw, 2rem);
+}
+
+.panels {
+  position: relative;
   flex: 1;
   min-height: 0;
+}
+
+.panel {
+  position: relative;
+  overflow: hidden;
+  // A drawn opening, not a shaded box — the rule is the brand.
+  border: vars.$rule-hairline;
+}
+
+.sheet {
+  display: block;
   width: 100%;
   height: 100%;
 }
 
-// Drawn wall opening — a rule, not a shaded box.
-.frame {
-  fill: none;
-  stroke: rgb(26 25 24 / 12%);
-  stroke-width: 1;
-}
-
-// The paper itself, before pattern.
+// The paper before pattern.
 .ground {
   fill: vars.$color-warm-ceramic;
 }
 
-// All three tiles are line work in the structural ink colour, held well below
+// All three tiles are line work in the structural ink colour, kept well below
 // full strength so pattern never outweighs the room.
 .ink {
   fill: none;
@@ -84,15 +103,17 @@
 }
 
 .sweep {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 26%;
+  background: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0%),
+    rgb(255 255 255 / 55%),
+    rgb(255 255 255 / 0%)
+  );
   mix-blend-mode: overlay;
   pointer-events: none;
-}
-
-.legend {
-  display: grid;
-  flex-shrink: 0;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
 }
 
 .legendItem {

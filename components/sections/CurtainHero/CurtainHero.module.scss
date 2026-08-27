@@ -1,0 +1,85 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.stage {
+  @include mix.viewport-stage;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: vars.$color-ivory-stone;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  align-items: center;
+  max-width: 72rem;
+  padding-inline: vars.$gutter;
+  text-align: center;
+}
+
+.title {
+  @include mix.hero-title($centred: true);
+
+  // "ARCHITECTURAL" at 0.25em tracking is the widest single word in the whole
+  // type system. At the PRD's 2.5rem mobile floor it cannot fit one line on a
+  // phone, and the browser resolves that by breaking mid-word, which reads as a
+  // bug rather than as typography. Size the hero from the viewport instead,
+  // still capped at the PRD's 4.5rem desktop value. Tracking, weight and
+  // line-height stay exactly as specified.
+  font-size: clamp(1.5rem, 5.2vw, 4.5rem);
+  text-wrap: balance;
+}
+
+.subtitle {
+  max-width: 46ch;
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial($centred: true);
+}
+
+.panel {
+  position: absolute;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  width: 50vw;
+  height: 100%;
+  background-color: vars.$color-warm-ceramic;
+}
+
+.panelLeft {
+  left: 0;
+  justify-content: flex-end;
+  padding-right: clamp(0.75rem, 2vw, 2rem);
+  // The seam is a drawn line, not a shadow — the PRD rules out arbitrary
+  // gradients and drop shadows as surface depth.
+  border-right: vars.$rule-whisper;
+}
+
+.panelRight {
+  right: 0;
+  justify-content: flex-start;
+  padding-left: clamp(0.75rem, 2vw, 2rem);
+}
+
+.brandMark {
+  @include mix.caption;
+
+  font-size: clamp(0.7rem, 1.15vw, 1.1rem);
+  white-space: nowrap;
+}
+
+.scrollCue {
+  position: absolute;
+  bottom: clamp(1.5rem, 5vh, 3rem);
+  left: 50%;
+  z-index: 20;
+  color: vars.$color-stone-muted;
+  transform: translateX(-50%);
+  @include mix.caption;
+}

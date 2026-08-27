@@ -1,0 +1,135 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  overflow: hidden;
+  background-color: vars.$color-ivory-stone;
+}
+
+.intro {
+  @include mix.frame;
+
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: 1fr;
+  gap: 0.75rem 4rem;
+  padding-bottom: clamp(1.5rem, 4vh, 2.5rem);
+  @include mix.below-header;
+
+  @include mix.from(vars.$bp-tablet) {
+    // Title left, standfirst right, sharing the page's single alignment axis.
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+}
+
+.eyebrow {
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+
+  @include mix.from(vars.$bp-tablet) {
+    grid-column: 1;
+  }
+}
+
+.title {
+  @include mix.section-header;
+
+  @include mix.from(vars.$bp-tablet) {
+    grid-column: 1;
+  }
+}
+
+.body {
+  max-width: vars.$measure;
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial;
+
+  @include mix.from(vars.$bp-tablet) {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+  }
+}
+
+.viewport {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: clamp(2rem, 6vh, 4rem);
+
+  // Below the pin breakpoint this is an ordinary swipeable row, so the section
+  // stays usable without a pinned track.
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+
+  @include mix.from(vars.$bp-tablet) {
+    overflow: hidden;
+    scroll-snap-type: none;
+  }
+}
+
+.rail {
+  display: flex;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  align-items: stretch;
+  height: 100%;
+  padding-inline: vars.$gutter;
+  // The rail is wider than the viewport by design; let it size to its cards.
+  width: max-content;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 78vw;
+  max-width: 30rem;
+  scroll-snap-align: center;
+
+  @include mix.from(vars.$bp-tablet) {
+    width: 32vw;
+  }
+}
+
+.frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// Wider than the frame so the parallax drift never exposes an edge.
+.pan {
+  position: absolute;
+  inset: 0 -8%;
+}
+
+.caption {
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 1.25rem;
+}
+
+.index {
+  grid-row: 1 / span 2;
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+}
+
+.cardTitle {
+  @include mix.card-title;
+}
+
+.blurb {
+  max-width: 34ch;
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial;
+
+  // The rail is horizontal; long blurbs would push card heights apart.
+  font-size: clamp(0.85rem, 0.95vw, 0.95rem);
+}

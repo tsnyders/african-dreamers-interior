@@ -1,0 +1,45 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.plate {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  // Resolves to auto when the parent height is auto, so an inline
+  // aspect-ratio still drives the frame; fills when a parent constrains it.
+  height: 100%;
+  overflow: hidden;
+  background-color: vars.$color-warm-ceramic;
+  border: vars.$rule-whisper;
+}
+
+// Visible only while the plate behind it is missing — the disclosed-placeholder
+// state. Once real photography is dropped into public/images it is covered.
+.label {
+  padding: clamp(1rem, 3vw, 2rem);
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+}
+
+// Cut-outs supply their own silhouette; a ground and a rule would put them
+// back in a box.
+.bare {
+  background-color: transparent;
+  border: 0;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+
+  .bare & {
+    object-fit: contain;
+  }
+
+  // While a plate is missing the browser paints the alt text over the frame.
+  // Hide it visually — the label below already says what the plate is, and alt
+  // must stay on the element for screen readers.
+  color: transparent;
+}

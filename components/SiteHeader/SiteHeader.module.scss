@@ -1,0 +1,97 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.header {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 100;
+  // Over the hero the header is a rule drawn on the stone, with no plate of its
+  // own. Once content starts passing underneath it takes the ivory surface, so
+  // the wordmark stays legible against photography and pinned sections.
+  pointer-events: none;
+  background-color: transparent;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color vars.$dur-ui vars.$ease-architectural,
+    border-color vars.$dur-ui vars.$ease-architectural;
+
+  &[data-grounded="true"] {
+    background-color: vars.$color-ivory-stone;
+    border-bottom: vars.$rule-whisper;
+  }
+
+  @include mix.reduced-motion {
+    transition: none;
+  }
+}
+
+.inner {
+  @include mix.frame;
+
+  display: flex;
+  // Narrow viewports cannot hold the wordmark and three tracked nav items on
+  // one line; letting it wrap puts the nav on its own row instead of letting
+  // the two collide.
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem clamp(1rem, 4vw, 6rem);
+  padding-block: clamp(1rem, 3vh, 2.25rem);
+}
+
+.wordmark {
+  display: flex;
+  gap: 0.6em;
+  align-items: baseline;
+  white-space: nowrap;
+  pointer-events: auto;
+  @include mix.caption;
+}
+
+.wordmarkName {
+  font-weight: vars.$weight-medium;
+}
+
+.wordmarkSuffix {
+  color: vars.$color-stone-muted;
+}
+
+.nav {
+  display: flex;
+  gap: clamp(0.9rem, 3vw, 2.75rem);
+  white-space: nowrap;
+}
+
+.navLink {
+  position: relative;
+  display: inline-block;
+  padding-block: 0.35em;
+  pointer-events: auto;
+  @include mix.caption;
+
+  // Structural underline rather than a colour change — the rule is the brand.
+  &::after {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 1px;
+    background-color: vars.$color-stone-dark;
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform vars.$dur-ui vars.$ease-architectural;
+    content: "";
+  }
+
+  &:hover::after,
+  &:focus-visible::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  @include mix.reduced-motion {
+    &::after {
+      transition: none;
+    }
+  }
+}

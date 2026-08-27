@@ -1,0 +1,7 @@
+.heading {
+  // Hidden until SplitText has built the line masks, otherwise the un-split
+  // text flashes at full height for a frame before dropping into the mask.
+  // JS reveals it in onSplit. The page is scroll-animation driven end to end,
+  // so there is no meaningful no-JS rendering to protect here.
+  visibility: hidden;
+}

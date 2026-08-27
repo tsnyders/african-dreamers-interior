@@ -1,0 +1,99 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.footer {
+  background-color: vars.$color-warm-ceramic;
+  border-top: vars.$rule-hairline;
+}
+
+.inner {
+  @include mix.frame;
+
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(2.5rem, 6vw, 4rem);
+  padding-block: clamp(4rem, 10vh, 7rem) clamp(2.5rem, 6vh, 4rem);
+
+  @include mix.from(vars.$bp-mobile) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include mix.from(vars.$bp-tablet) {
+    // Brand block takes a wider first column so the three link columns share a
+    // single alignment axis with the sections above.
+    grid-template-columns: 1.6fr repeat(3, 1fr);
+  }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wordmark {
+  @include mix.card-title;
+}
+
+.tagline {
+  max-width: 24ch;
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.columnTitle {
+  padding-bottom: 1rem;
+  color: vars.$color-stone-muted;
+  border-bottom: vars.$rule-whisper;
+  @include mix.caption;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.link {
+  display: inline-block;
+  @include mix.body-editorial;
+
+  // Hairline reveal, matching the header. Opacity and transform only.
+  background-image: linear-gradient(
+    vars.$color-stone-dark,
+    vars.$color-stone-dark
+  );
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size vars.$dur-ui vars.$ease-architectural;
+
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1px;
+  }
+
+  @include mix.reduced-motion {
+    transition: none;
+  }
+}
+
+.address {
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial;
+}
+
+.colophon {
+  @include mix.frame;
+
+  padding-block: 2rem;
+  color: vars.$color-stone-muted;
+  border-top: vars.$rule-whisper;
+  @include mix.caption;
+}

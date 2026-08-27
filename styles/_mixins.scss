@@ -1,0 +1,101 @@
+@use "variables" as vars;
+
+// The PRD's typographic scale, verbatim. This is the ONLY place tracking,
+// line-height and weight are written — the Playwright suite asserts computed
+// styles against these numbers, so nothing may restate them inline.
+//
+// Wide tracking adds a trailing space after the last glyph, which pulls
+// centred text visually left. `$centred: true` pays it back with a matching
+// padding-left, shifting the centre point right by exactly half the tracking.
+
+@mixin _tracked($tracking, $centred) {
+  letter-spacing: $tracking;
+
+  @if $centred {
+    padding-left: $tracking;
+  }
+}
+
+@mixin hero-title($centred: false) {
+  font-family: vars.$font-montserrat;
+  font-weight: vars.$weight-light;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  line-height: 1.2;
+  text-transform: uppercase;
+  @include _tracked(0.25em, $centred);
+}
+
+@mixin section-header($centred: false) {
+  font-family: vars.$font-montserrat;
+  font-weight: vars.$weight-regular;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.3;
+  text-transform: uppercase;
+  @include _tracked(0.2em, $centred);
+}
+
+@mixin card-title($centred: false) {
+  font-family: vars.$font-montserrat;
+  font-weight: vars.$weight-medium;
+  font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+  line-height: 1.4;
+  text-transform: uppercase;
+  @include _tracked(0.15em, $centred);
+}
+
+@mixin body-editorial($centred: false) {
+  font-family: vars.$font-montserrat;
+  font-weight: vars.$weight-light;
+  font-size: clamp(0.95rem, 1.1vw, 1.125rem);
+  line-height: 1.8;
+  @include _tracked(0.05em, $centred);
+}
+
+@mixin caption($centred: false) {
+  font-family: vars.$font-montserrat;
+  font-weight: vars.$weight-regular;
+  font-size: clamp(0.7rem, 0.8vw, 0.75rem);
+  line-height: 1.5;
+  text-transform: uppercase;
+  @include _tracked(0.3em, $centred);
+}
+
+// ── Layout ───────────────────────────────────────────────────────────────────
+
+// The page's single horizontal frame. Every full-width section uses this so
+// content shares one alignment axis top to bottom.
+@mixin frame {
+  width: 100%;
+  max-width: vars.$frame-max;
+  margin-inline: auto;
+  padding-inline: vars.$gutter;
+}
+
+// Full-viewport section that survives the mobile URL-bar collapse. `svh` keeps
+// a pinned ScrollTrigger from re-measuring mid-scroll and jumping.
+@mixin viewport-stage {
+  position: relative;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+}
+
+// Clears the fixed header, whose height is published by SiteHeader as
+// --header-h. The fallback covers server-rendered markup before the measure
+// lands, and is deliberately generous — overlapping the header is far worse
+// than a little extra whitespace.
+@mixin below-header($extra: clamp(0.75rem, 3vh, 2.5rem)) {
+  padding-top: calc(var(--header-h, 6.5rem) + #{$extra});
+}
+
+@mixin from($bp) {
+  @media (min-width: $bp) {
+    @content;
+  }
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}

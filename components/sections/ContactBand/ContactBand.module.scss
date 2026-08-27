@@ -1,0 +1,66 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.section {
+  @include mix.frame;
+
+  padding-block: vars.$section-y;
+  background-color: vars.$color-ivory-stone;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: center;
+  max-width: 56rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.eyebrow {
+  color: vars.$color-stone-muted;
+  @include mix.caption($centred: true);
+}
+
+.title {
+  @include mix.section-header($centred: true);
+}
+
+.body {
+  max-width: 48ch;
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial($centred: true);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.primary {
+  padding: 1.1rem 2.5rem;
+  color: vars.$color-ivory-stone;
+  background-color: vars.$color-stone-dark;
+  transition: opacity vars.$dur-ui vars.$ease-architectural;
+  @include mix.caption($centred: true);
+
+  &:hover,
+  &:focus-visible {
+    opacity: 0.82;
+  }
+
+  @include mix.reduced-motion {
+    transition: none;
+  }
+}
+
+.secondary {
+  padding-bottom: 0.35rem;
+  border-bottom: vars.$rule-hairline;
+  @include mix.caption($centred: true);
+}

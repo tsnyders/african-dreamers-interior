@@ -1,0 +1,159 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.section {
+  display: flex;
+  flex-direction: column;
+  height: 100svh;
+  overflow: hidden;
+  background-color: vars.$color-ivory-stone;
+}
+
+.intro {
+  @include mix.frame;
+
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: 1fr;
+  gap: 0.5rem 4rem;
+  // This section has to fit an intro, the demo and a legend inside one
+  // viewport. On a phone the generous desktop padding left the floor plane
+  // 157px tall, which is not enough for the perspective shader to read as
+  // flooring at all — it smears. The demo gets the height back.
+  padding-bottom: clamp(0.5rem, 2vh, 2rem);
+  @include mix.below-header(clamp(0.5rem, 2vh, 1.75rem));
+
+  @include mix.from(vars.$bp-tablet) {
+    gap: 0.75rem 4rem;
+    grid-template-columns: 1fr 1fr;
+    align-items: end;
+  }
+}
+
+.eyebrow {
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+}
+
+.title {
+  @include mix.section-header;
+}
+
+.body {
+  max-width: vars.$measure;
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial;
+
+  font-size: clamp(0.8rem, 3.4vw, 1.125rem);
+  line-height: 1.6;
+
+  @include mix.from(vars.$bp-tablet) {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    line-height: 1.8;
+  }
+}
+
+.stage {
+  @include mix.frame;
+
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.room {
+  position: absolute;
+  inset: 0 vars.$gutter;
+}
+
+// The floor band. Sits over the lower part of the room so walls and window
+// light stay photographic and only the floor plane is rendered.
+.canvas {
+  position: absolute;
+  bottom: 0;
+  left: vars.$gutter;
+  // A canvas is a replaced element: with `width: auto` it keeps its intrinsic
+  // 300x150 box and the browser drops the `right` inset rather than stretching
+  // to fill. The size has to be stated outright.
+  display: block;
+  width: calc(100% - #{vars.$gutter} * 2);
+  // A taller share on small screens, where every pixel of floor counts.
+  height: 68%;
+
+  @include mix.from(vars.$bp-tablet) {
+    height: 56%;
+  }
+}
+
+.legend {
+  @include mix.frame;
+
+  display: grid;
+  flex-shrink: 0;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem clamp(0.75rem, 3vw, 2.5rem);
+  padding-block: clamp(0.75rem, 2vh, 2.25rem);
+}
+
+.swatch {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.2rem 0.6rem;
+  align-items: center;
+  padding-top: 0.6rem;
+
+  @include mix.from(vars.$bp-mobile) {
+    gap: 0.25rem 0.85rem;
+    padding-top: 0.85rem;
+  }
+  border-top: vars.$rule-whisper;
+  opacity: 0.42;
+  transition: opacity vars.$dur-ui vars.$ease-architectural;
+
+  &[data-active="true"] {
+    opacity: 1;
+  }
+
+  @include mix.reduced-motion {
+    transition: none;
+  }
+}
+
+.chip {
+  grid-row: 1 / span 2;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: vars.$rule-whisper;
+
+  @include mix.from(vars.$bp-mobile) {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
+.swatchName {
+  @include mix.caption;
+
+  letter-spacing: 0.12em;
+
+  @include mix.from(vars.$bp-mobile) {
+    letter-spacing: 0.3em;
+  }
+}
+
+// Three tracked captions stacked four lines deep is noise at phone width; the
+// swatch name and its chip already carry the comparison.
+.swatchNote {
+  display: none;
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+
+  font-weight: vars.$weight-light;
+  letter-spacing: 0.18em;
+
+  @include mix.from(vars.$bp-mobile) {
+    display: block;
+  }
+}

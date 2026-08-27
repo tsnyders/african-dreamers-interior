@@ -1,0 +1,98 @@
+@use "variables" as vars;
+@use "mixins" as mix;
+
+.page {
+  @include mix.frame;
+
+  padding-bottom: vars.$section-y;
+  @include mix.below-header(clamp(2.5rem, 8vh, 5rem));
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-bottom: clamp(2.5rem, 7vh, 4.5rem);
+  border-bottom: vars.$rule-whisper;
+}
+
+.eyebrow {
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+}
+
+.title {
+  @include mix.hero-title;
+
+  font-size: clamp(2rem, 5.2vw, 4.5rem);
+  text-wrap: balance;
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: vars.$measure;
+  padding-block: clamp(2.5rem, 7vh, 4.5rem);
+}
+
+.paragraph {
+  @include mix.body-editorial;
+}
+
+.capabilities {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem 4rem;
+  padding-top: clamp(2.5rem, 7vh, 4rem);
+  border-top: vars.$rule-whisper;
+
+  & + & {
+    margin-top: clamp(2.5rem, 7vh, 4rem);
+  }
+
+  @include mix.from(vars.$bp-tablet) {
+    grid-template-columns: 1fr 2.4fr;
+  }
+}
+
+.sectionLabel {
+  color: vars.$color-stone-muted;
+  @include mix.caption;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem clamp(2rem, 5vw, 4rem);
+
+  @include mix.from(vars.$bp-mobile) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.capability {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.capabilityTitle {
+  @include mix.card-title;
+}
+
+.capabilityBody {
+  color: vars.$color-stone-muted;
+  @include mix.body-editorial;
+}
+
+.attribution {
+  @include mix.caption;
+}
+
+.empty {
+  padding: 1.5rem;
+  color: vars.$color-stone-muted;
+  background-color: vars.$color-warm-ceramic;
+  @include mix.caption;
+}

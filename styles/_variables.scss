@@ -1,0 +1,37 @@
+// African Dreamers Interior — design tokens.
+// Values tagged (PRD) are specified verbatim in the Product Requirement Document.
+
+// ── Surface & material ───────────────────────────────────────────────────────
+$color-ivory-stone: #fdfbf7; // (PRD) base — travertine / honed limestone
+$color-warm-ceramic: #f4f0ea; // (PRD) containers — unglazed porcelain
+$color-stone-dark: #1a1918; // (PRD) type + structural rules
+$color-stone-muted: #6b6660; // referenced by the PRD but never defined there.
+// Chosen for 4.54:1 on ivory stone — the lightest
+// value that still clears WCAG AA for body copy.
+
+// Structural rules only — the PRD forbids arbitrary drop shadows and gradients,
+// so depth comes from hairlines and surface tone changes.
+$rule-hairline: 1px solid rgba(26, 25, 24, 0.12);
+$rule-whisper: 1px solid rgba(26, 25, 24, 0.05);
+
+// ── Type ─────────────────────────────────────────────────────────────────────
+// --font-montserrat is published by next/font in app/layout.tsx.
+$font-montserrat: var(--font-montserrat), "Helvetica Neue", arial, sans-serif;
+
+$weight-light: 300; // (PRD)
+$weight-regular: 400; // (PRD)
+$weight-medium: 500; // (PRD)
+
+// ── Architectural whitespace ─────────────────────────────────────────────────
+$gutter: clamp(1.5rem, 5vw, 6rem);
+$section-y: clamp(6rem, 14vh, 11rem);
+$measure: 62ch; // editorial line length ceiling
+$frame-max: 1600px;
+
+// ── Motion ───────────────────────────────────────────────────────────────────
+$ease-architectural: cubic-bezier(0.22, 1, 0.36, 1);
+$dur-ui: 0.4s;
+
+// ── Breakpoints ──────────────────────────────────────────────────────────────
+$bp-mobile: 640px;
+$bp-tablet: 960px;

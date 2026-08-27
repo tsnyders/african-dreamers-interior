@@ -10,12 +10,12 @@ when it is within a small step of its neighbour's colour. That follows the
 floor's light gradient into every corner and stops dead at real edges — the
 sofa plinth, the side table, the door track.
 
-One region needs help: along the left wall the plaster and the floor are the
-same tone with no shadow line at all (the luminance profile is smooth straight
-through the junction), so nothing can detect a boundary there and the grow
-climbs the wall. That region gets a stated ceiling instead, set slightly low on
-purpose — leaving a few pixels of original floor at the wall reads as a
-skirting, whereas painting walnut up the wall does not.
+One region needs help: along the left wall the plaster and the floor are nearly
+the same tone, so the grow can climb the wall. That wall's base is NOT a
+horizontal line — it is a steep diagonal running from the corner behind the
+sofa down to the bottom-left of the frame — so the ceiling is a polyline traced
+off the plate rather than a constant. Getting this wrong paints a large wedge
+of wall, which is exactly what a flat ceiling did.
 
 Run this after changing the room plate:
 
@@ -35,16 +35,34 @@ SEEDS = [
     (0.30, 0.88),
     (0.50, 0.92),
     (0.70, 0.80),
-    (0.12, 0.80),
+    (0.12, 0.90),
     (0.88, 0.90),
     (0.97, 0.96),
+    # Behind the sofa and into the left corner: that pocket is walled off from
+    # the open floor by the sofa's plinth and its cast shadow, so it needs its
+    # own seeds or it is simply never reached.
+    (0.34, 0.685),
+    (0.45, 0.685),
+    (0.58, 0.685),
+    (0.655, 0.665),
 ]
 
-# Highest the floor may reach. Tight where no edge exists to stop the grow;
-# loose past the corner, where the door track does the work.
-BACK_WALL_Y = 0.663
-BACK_WALL_UNTIL_X = 0.63
-GLAZING_CEILING_Y = 0.615
+# Highest the floor may reach, as (x, y) fractions of the plate, linearly
+# interpolated between. Traced off the plate; tight where no edge exists to stop
+# the grow, loose past the corner where the door track does the work.
+#
+#   x < 0.055   the left wall's dark return — effectively no floor
+#   -> 0.32     the left wall's base, a steep diagonal down to the frame edge
+#   -> 0.63     the back wall's base, level
+#   beyond      loose: the door track is a real edge and stops the grow itself
+CEILING = [
+    (0.000, 0.985),
+    (0.055, 0.985),
+    (0.320, 0.655),
+    (0.630, 0.663),
+    (0.680, 0.600),
+    (1.000, 0.600),
+]
 
 # How far a neighbouring pixel may differ and still be the same surface. Small
 # enough to stop at the sofa plinth, large enough to walk the light gradient.
@@ -56,11 +74,8 @@ def main() -> None:
     width, height = im.size
     pixels = np.asarray(im).astype(np.int16)
 
-    ceiling = np.where(
-        np.arange(width) / width <= BACK_WALL_UNTIL_X,
-        BACK_WALL_Y,
-        GLAZING_CEILING_Y,
-    )
+    xs = np.arange(width) / width
+    ceiling = np.interp(xs, [p[0] for p in CEILING], [p[1] for p in CEILING])
     ceiling = (ceiling * height).astype(np.int32)
 
     seen = np.zeros((height, width), bool)
@@ -84,10 +99,24 @@ def main() -> None:
                 queue.append((ny, nx))
 
     mask = Image.fromarray((seen * 255).astype(np.uint8), "L")
-    # Close pinholes left by grout lines and specks, then soften the cut so the
-    # new floor meets the skirting without aliasing.
+    # Close the serrated notches the door track leaves along the glazing, then
+    # open to drop specks, then feather so the matte doubles as the alpha.
+    #
+    # Keep the closing kernel small: closing bridges concavities, and a wide one
+    # reaches straight across the gaps between the side table's legs and
+    # swallows the legs with them.
     mask = mask.filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.MinFilter(5))
-    mask = mask.filter(ImageFilter.GaussianBlur(1.2))
+    mask = mask.filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))
+
+    # Whatever the morphology did, a pixel much darker than the floor around it
+    # is furniture, not floor. This is what actually protects the table legs.
+    lum = np.asarray(im.convert("L")).astype(np.float32)
+    floor_lum = np.median(lum[seen]) if seen.any() else 128.0
+    mask = Image.fromarray(
+        np.where(lum < floor_lum * 0.62, 0, np.asarray(mask)).astype(np.uint8), "L"
+    )
+
+    mask = mask.filter(ImageFilter.GaussianBlur(1.4))
     mask.save(OUT, "WEBP", quality=90, method=6)
     print(f"floor is {seen.mean() * 100:.1f}% of the plate -> {OUT}")
 

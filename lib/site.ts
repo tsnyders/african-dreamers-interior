@@ -196,16 +196,19 @@ export const CUSHIONS_INTRO = {
 // Cut-outs: each plate carries its own alpha and is rendered on a `bare` Plate
 // so it sits directly on the stone. Adding one here is enough — the drift
 // arrangement wraps, so any number of cushions is laid out and animated.
-//
-// TODO: a fourth, "Ivory boucle" (/images/cushion-boucle.webp), is still to be
-// generated — the image service hit its daily quota. The copy elsewhere already
-// names boucle as a house material, so it is worth adding back.
+// Cut out with tools/cut-out-cushion.py.
 export const CUSHIONS: Cushion[] = [
   {
     id: "linen",
     name: "Washed linen",
     image: "/images/cushion-linen.webp",
     alt: "Square cushion in washed ivory linen",
+  },
+  {
+    id: "boucle",
+    name: "Ivory boucle",
+    image: "/images/cushion-boucle.webp",
+    alt: "Textured boucle cushion in warm ivory",
   },
   {
     id: "woven",

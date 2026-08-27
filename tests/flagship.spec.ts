@@ -15,10 +15,47 @@ const TYPE_SCALE = [
   { role: "card", selector: "h3", tracking: 0.15, lineHeight: 1.4, weight: 500, upper: true },
 ];
 
-/** GSAP scrubs with a 1s catch-up; sampling earlier reads a half-played frame. */
+/**
+ * Scroll, then wait for the scrubbed timelines to actually stop moving.
+ *
+ * GSAP scrubs with a ~1s catch-up, so sampling too early reads a half-played
+ * frame. A fixed timeout is the obvious fix and it is flaky: under parallel
+ * load across four browser projects the catch-up takes longer, which surfaced
+ * as an intermittent screenshot diff on WebKit. Poll the animated transforms
+ * instead and carry on once two consecutive reads agree.
+ */
 async function scrollTo(page: Page, y: number) {
   await page.evaluate((to) => window.scrollTo(0, to), y);
-  await page.waitForTimeout(1800);
+  // Floor before polling: ScrollTrigger has not started the scrub tween on the
+  // frame the scroll lands, so an immediate stability check reads the same
+  // pre-animation values twice and returns before anything has moved.
+  await page.waitForTimeout(700);
+  await page
+    .waitForFunction(
+      () => {
+        const w = window as unknown as { __prev?: string; __same?: number };
+        const now = [
+          ...document.querySelectorAll(
+            "[data-curtain], [data-mask], .pin-spacer > section",
+          ),
+        ]
+          .map(
+            (el) =>
+              getComputedStyle(el).transform +
+              (el.getAttribute("transform") ?? ""),
+          )
+          .join("|");
+        w.__same = now === w.__prev ? (w.__same ?? 0) + 1 : 0;
+        w.__prev = now;
+        return (w.__same ?? 0) >= 3;
+      },
+      undefined,
+      { timeout: 8000, polling: 200 },
+    )
+    .catch(() => {
+      // Fall through to the assertion, which reports the actual problem far
+      // better than a wait-for timeout would.
+    });
 }
 
 /**

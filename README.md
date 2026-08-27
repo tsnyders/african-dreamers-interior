@@ -33,8 +33,9 @@ section is set to its end state rather than left blank.
 `lib/site.ts` is the single source of truth for every string, image path and
 swatch on the site. Nothing is written into JSX.
 
-> **This is a mockup.** Contact details are `TODO_` sentinels, and every
-> photograph is AI-generated placeholder imagery — not the studio's own work.
+> **This is a mockup.** Contact details are empty — the UI drops anything it
+> has no value for — and every photograph is AI-generated placeholder imagery,
+> not the studio's own work.
 > Both must be replaced before launch. `TESTIMONIALS` is deliberately empty and
 > renders a labelled empty state; no client feedback is invented.
 > See `CLAUDE.md` for the full outstanding list.

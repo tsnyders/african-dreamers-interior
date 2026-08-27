@@ -97,3 +97,7 @@
   border-top: vars.$rule-whisper;
   @include mix.caption;
 }
+
+.addressLine {
+  display: block;
+}

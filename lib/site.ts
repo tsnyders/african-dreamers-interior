@@ -1,10 +1,12 @@
 // Single source of truth for African Dreamers Interior.
 // Edit copy HERE, never in JSX.
 //
-// PLACEHOLDER CONTACT DETAILS ───────────────────────────────────────────────
-// Every value below marked TODO_ is a sentinel, not a real business detail.
-// Replace all of them before this mockup is shown to the client. `npm run lint`
-// will not catch these — grep for "TODO_" instead.
+// CONTACT DETAILS NOT SUPPLIED YET ──────────────────────────────────────────
+// The contact fields below are empty on purpose. Empty means "not supplied",
+// and every component that reads them skips the row, the link or the whole
+// block rather than rendering a blank or a placeholder string. Fill them in
+// here and the footer, the contact page and the enquiry band come back on
+// their own — no markup to change.
 // ────────────────────────────────────────────────────────────────────────────
 
 export const SITE = {
@@ -15,23 +17,23 @@ export const SITE = {
   description:
     "Bespoke interior design studio crafting patios, flooring, upholstery and wall finishes for private estates, developers and commercial spaces.",
 
-  phoneDisplay: "TODO_PHONE_DISPLAY",
-  phoneHref: "tel:TODO_PHONE_E164",
-  whatsappHref: "https://wa.me/TODO_WHATSAPP_E164",
-  email: "TODO_EMAIL",
-  emailHref: "mailto:TODO_EMAIL",
+  phoneDisplay: "",
+  phoneHref: "",
+  whatsappHref: "",
+  email: "",
+  emailHref: "",
 
-  addressLine1: "TODO_STREET",
-  addressLine2: "TODO_CITY",
-  mapsHref: "TODO_MAPS_URL",
-  hours: "TODO_HOURS",
+  addressLine1: "",
+  addressLine2: "",
+  mapsHref: "",
+  hours: "",
 
-  instagramHandle: "TODO_IG_HANDLE",
-  instagramHref: "TODO_IG_URL",
-  tiktokHandle: "TODO_TIKTOK_HANDLE",
-  tiktokHref: "TODO_TIKTOK_URL",
-  facebookName: "TODO_FB_NAME",
-  facebookHref: "TODO_FB_URL",
+  instagramHandle: "",
+  instagramHref: "",
+  tiktokHandle: "",
+  tiktokHref: "",
+  facebookName: "",
+  facebookHref: "",
 } as const;
 
 export const NAV = [
@@ -301,4 +303,6 @@ export const CONTACT = {
   title: "Begin a project",
   body: "Tell us the room, the building and roughly when you would like to be living in it. We reply to every enquiry.",
   cta: "Send an enquiry",
+  /** Shown on /contact only while SITE has no contact details to list. */
+  pending: "Direct contact details are added before launch.",
 } as const;

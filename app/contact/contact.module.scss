@@ -127,3 +127,15 @@
   border-top: vars.$rule-whisper;
   @include mix.caption;
 }
+
+.addressLine {
+  display: block;
+}
+
+// Stands in for the details blocks while SITE has nothing to list.
+.pending {
+  padding-top: clamp(2rem, 6vh, 3.5rem);
+  color: vars.$color-stone-muted;
+  border-top: vars.$rule-whisper;
+  @include mix.body-editorial;
+}

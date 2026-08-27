@@ -17,9 +17,11 @@ export function ContactBand() {
           <Link href="/contact" className={styles.primary}>
             {CONTACT.cta}
           </Link>
-          <a href={SITE.phoneHref} className={styles.secondary}>
-            {SITE.phoneDisplay}
-          </a>
+          {SITE.phoneDisplay && SITE.phoneHref && (
+            <a href={SITE.phoneHref} className={styles.secondary}>
+              {SITE.phoneDisplay}
+            </a>
+          )}
         </div>
       </div>
     </section>

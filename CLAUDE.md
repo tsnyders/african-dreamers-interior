@@ -72,8 +72,11 @@ run with cwd inside this project. Notes learned the hard way:
   otherwise gets holes punched through its middle.
 
 ## Outstanding before this is shown to the client
-1. **Every `TODO_` value in `lib/site.ts` is a placeholder.** `grep -rn TODO_ lib/`.
-   Lint will not catch them.
+1. **No contact details yet.** The contact fields in `lib/site.ts` are empty
+   strings, and empty means "not supplied": the footer, `/contact` and the
+   enquiry band each drop the row, the link or the whole column rather than
+   render a blank. Fill them in and everything comes back on its own — there is
+   no markup to change and nothing to un-hide.
 2. **All imagery is agy-generated placeholder, not the studio's own work.**
    Must be disclosed when showing the client and swapped for real project
    photography before launch. Wallpaper patterns are vector and are final.

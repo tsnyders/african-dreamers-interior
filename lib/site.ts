@@ -150,6 +150,33 @@ export const FLOOR_OPTIONS: FloorOption[] = [
 export const FLOORING_ROOM = {
   image: "/images/room-interior.webp",
   alt: "Bright minimal interior room with tall windows and a bare floor",
+
+  // Where the floor actually is in the photograph, as fractions of the plate
+  // with (0,0) at its top-left. This is what lets the shader paste a new floor
+  // into the room's own perspective and mask it to the real floor, instead of
+  // laying a rectangle over the lower half of the picture.
+  //
+  // Re-measure these whenever the room plate changes. Overlay a percentage grid
+  // on the image and read off: the wall/floor line, where that line kinks to
+  // follow a receding wall, and four corners of a floor rectangle (the near
+  // pair may sit outside the frame — the mask clips them).
+  floor: {
+    /** Near-left, near-right, far-right, far-left. */
+    quad: [
+      [-0.1, 1.02],
+      [1.25, 1.02],
+      [0.62, 0.645],
+      [0.045, 0.645],
+    ],
+    /** Height of the back wall / floor junction. */
+    wallY: 0.645,
+    /** Beyond this x the junction rises to follow the window wall. */
+    kinkX: 0.62,
+    /** Rise per unit x past the kink. */
+    slope: 0.618,
+    /** Plank tiling across the floor rectangle: (across, into the room). */
+    repeat: [5, 8],
+  },
 } as const;
 
 // ── Section: Scattered cushions (velocity physics) ───────────────────────────

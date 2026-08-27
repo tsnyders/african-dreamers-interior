@@ -1,11 +1,22 @@
-// GLSL for the flooring comparison plane.
+// GLSL for the flooring comparison.
 //
-// Kept out of the component so the shader can be read as shader source, and so
-// the component file stays about lifecycle rather than about lighting.
+// This is a composite, not an overlay. The plane covers the whole photograph,
+// but only paints where the room's floor actually is: fragments above the
+// wall/floor junction are discarded, so the walls, window and garden stay the
+// original picture, untouched.
 //
-// UV convention: v = 0 is the near edge of the floor (bottom of the canvas,
-// closest to the viewer), v = 1 is the far edge where the floor meets the
-// room photograph behind it.
+// Inside the floor, each fragment is mapped through the inverse of a homography
+// (`uInvFloor`) taking a unit square onto a floor rectangle measured in the
+// plate. That is what makes the planks recede along the room's own perspective
+// instead of sitting flat on top of it.
+//
+// Lighting comes from the photograph. The new material is multiplied by the
+// original floor's luminance, so the window light, the wall bounce and the
+// contact shadows under the furniture all survive the swap — which is what
+// makes a retouched floor look like it belongs in the room.
+//
+// Coordinate convention: `s` is screen space with (0,0) at the TOP left,
+// matching how the floor geometry is measured in lib/site.ts.
 
 export const FLOOR_VERTEX = /* glsl */ `
   varying vec2 vUv;
@@ -22,70 +33,81 @@ export const FLOOR_FRAGMENT = /* glsl */ `
   uniform sampler2D uTex0;
   uniform sampler2D uTex1;
   uniform sampler2D uTex2;
+  uniform sampler2D uRoom;
+
   uniform float uProgress;
-  uniform float uAspect;
   uniform vec2 uRepeat;
-  uniform float uDepth;
+
+  // Inverse homography: screen -> floor. Built on the CPU from the measured
+  // quad, already folded through the plate's object-fit: cover transform.
+  uniform mat3 uInvFloor;
+
+  // The wall/floor junction in screen space, after that same transform.
+  uniform float uWallY;
+  uniform float uKinkX;
+  uniform float uSlope;
+
+  // Where to sample the untouched plate, and the mean luminance of its floor so
+  // the transferred lighting is centred on 1.0.
+  uniform vec2 uPlateOffset;
+  uniform vec2 uPlateScale;
+  uniform float uLightRef;
 
   varying vec2 vUv;
 
-  // Colour space: this plane is a flat composite of two photographs, not a lit
-  // scene, so everything stays in display space. Textures are left untagged so
-  // Three does not decode them to linear, the falloff and sheen below are a
-  // straight display-space modulation, and nothing is encoded on the way out.
-  // Tagging them sRGB instead costs a decode with no matching encode — a fully
-  // custom fragment shader gets none of Three's output conversion appended —
-  // and the whole plane lands about a gamma too dark.
-
-  // Perspective foreshortening: the plane is read at a grazing angle, so planks
-  // compress toward the far edge instead of tiling flat like a swatch.
-  vec2 floorUv(vec2 uv) {
-    float depth = mix(1.0, uDepth, uv.y);
-    vec2 p = vec2((uv.x - 0.5) / depth + 0.5, uv.y / depth);
-    return p * uRepeat;
-  }
-
   void main() {
-    vec2 uv = floorUv(vUv);
+    vec2 s = vec2(vUv.x, 1.0 - vUv.y);
+
+    // Everything above the junction is wall, window or garden. Leave it alone.
+    float junction = uWallY + max(0.0, s.x - uKinkX) * uSlope;
+    if (s.y < junction) discard;
+
+    vec3 q = uInvFloor * vec3(s, 1.0);
+    if (abs(q.z) < 1e-6) discard;
+    vec2 st = q.xy / q.z;
+
+    vec2 uv = st * uRepeat;
 
     // uProgress walks two transitions: the first half is oak into walnut, the
-    // second walnut into micro-cement.
+    // second walnut into micro-cement. Branch-free selection — three fetches
+    // either way, and no driver-dependent behaviour from sampling inside a
+    // conditional.
     float p = clamp(uProgress, 0.0, 1.0) * 2.0;
     float stage = floor(min(p, 1.999));
     float t = clamp(p - stage, 0.0, 1.0);
-    float s = step(0.5, stage);
+    float sel = step(0.5, stage);
 
-    // Branch-free material selection — three fetches either way, and no
-    // driver-dependent behaviour from sampling inside a conditional.
     vec3 t0 = texture2D(uTex0, uv).rgb;
     vec3 t1 = texture2D(uTex1, uv).rgb;
     vec3 t2 = texture2D(uTex2, uv).rgb;
-    vec3 older = mix(t0, t1, s);
-    vec3 newer = mix(t1, t2, s);
+    vec3 older = mix(t0, t1, sel);
+    vec3 newer = mix(t1, t2, sel);
 
-    // Soft-edged vertical divider sweeping left to right. Everything behind it
-    // has already changed material.
-    float feather = 0.006 * uAspect;
-    float edge = smoothstep(t - feather, t + feather, vUv.x);
+    // The divider stays a true vertical in screen space. Following the floor's
+    // perspective would be more "correct" and much harder to read as a
+    // comparison.
+    float edge = smoothstep(t - 0.004, t + 0.004, s.x);
     vec3 color = mix(newer, older, edge);
 
-    // The divider drawn as a hairline rather than a hard seam, and only while
-    // it is actually crossing the floor.
+    // Relight from the plate. Clamped so a blown highlight or a deep shadow
+    // cannot drive the new material to pure white or black.
+    vec2 plateUv = (s - uPlateOffset) / uPlateScale;
+    vec3 room = texture2D(uRoom, clamp(plateUv, 0.0, 1.0)).rgb;
+    float lum = dot(room, vec3(0.2126, 0.7152, 0.0722));
+    // Eased back off full strength: at 1.0 a dark material in the shadowed
+    // corner loses its grain entirely, which reads as a hole in the floor
+    // rather than as shade.
+    float relight = mix(1.0, lum / max(uLightRef, 0.001), 0.85);
+    color *= clamp(relight, 0.58, 1.32);
+
+    // The divider drawn as a hairline, and only while it is crossing the floor.
     float live = step(0.004, t) * step(t, 0.996);
-    float rule = smoothstep(0.0045, 0.0, abs(vUv.x - t));
-    color = mix(color, vec3(1.0), rule * 0.5 * live);
+    color = mix(color, vec3(1.0), smoothstep(0.0035, 0.0, abs(s.x - t)) * 0.5 * live);
 
-    // Ambient room light: one soft falloff toward the far edge plus a grazing
-    // sheen band. Identical for every material, which is the whole point of
-    // comparing them in the same room.
-    float falloff = mix(1.04, 0.84, smoothstep(0.0, 1.0, vUv.y));
-    float sheen = smoothstep(0.42, 0.0, abs(vUv.y - 0.62)) * 0.08;
-    color = color * falloff + sheen;
+    // Soften the first pixels below the junction so the new floor meets the
+    // skirting instead of butting against it on a hard cut.
+    float seam = smoothstep(0.0, 0.012, s.y - junction);
 
-    // Fade the far edge so the plane meets the photograph instead of ending on
-    // a cut line.
-    float blend = 1.0 - smoothstep(0.82, 1.0, vUv.y);
-
-    gl_FragColor = vec4(color, blend);
+    gl_FragColor = vec4(color, seam);
   }
 `;

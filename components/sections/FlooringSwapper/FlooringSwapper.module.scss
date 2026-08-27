@@ -66,25 +66,25 @@
 .room {
   position: absolute;
   inset: 0 vars.$gutter;
+  width: calc(100% - #{vars.$gutter} * 2);
+  height: 100%;
+  object-fit: cover;
 }
 
 // The floor band. Sits over the lower part of the room so walls and window
 // light stay photographic and only the floor plane is rendered.
 .canvas {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: vars.$gutter;
-  // A canvas is a replaced element: with `width: auto` it keeps its intrinsic
-  // 300x150 box and the browser drops the `right` inset rather than stretching
-  // to fill. The size has to be stated outright.
+  // Exactly on top of the plate, same box and same object-fit crop, because
+  // the shader reproduces that crop to locate the floor. A canvas is also a
+  // replaced element: with `width: auto` it keeps its intrinsic 300x150 box
+  // and the browser drops the `right` inset rather than stretching to fill,
+  // so the size has to be stated outright.
   display: block;
   width: calc(100% - #{vars.$gutter} * 2);
-  // A taller share on small screens, where every pixel of floor counts.
-  height: 68%;
-
-  @include mix.from(vars.$bp-tablet) {
-    height: 56%;
-  }
+  height: 100%;
 }
 
 .legend {

@@ -3,31 +3,37 @@
 import { useEffect, useRef } from "react";
 import { PIN_PRIORITY, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { KineticHeading } from "@/components/KineticHeading/KineticHeading";
-import { Plate } from "@/components/Plate/Plate";
 import { FLOORING_INTRO, FLOORING_ROOM, FLOOR_OPTIONS } from "@/lib/site";
 import { FLOOR_FRAGMENT, FLOOR_VERTEX } from "./shaders";
+import {
+  coverTransform,
+  floorLuminance,
+  squareToQuad,
+  toScreen,
+  type Point,
+} from "./floorGeometry";
 import styles from "./FlooringSwapper.module.scss";
 
 /**
  * The one WebGL module on the page. A vertical divider sweeps across the floor
  * twice — oak into walnut, walnut into micro-cement — so all three laminates
- * are judged under identical ambient light.
+ * are judged in the same room under the same light.
+ *
+ * The floor is *replaced*, not covered. The canvas sits over the whole plate,
+ * but the shader discards everything above the wall/floor junction and pastes
+ * the new material through a homography built from the floor corners measured
+ * in `FLOORING_ROOM.floor`, then relights it from the photograph itself. Walls,
+ * window and garden are never drawn over.
  *
  * Two lifecycles, deliberately kept apart:
  *
  * 1. The pin is built at mount, like every other section's. A pin inserts a
- *    spacer into the document, so creating it late would shift everything
- *    below it mid-scroll. It writes scroll progress to a ref.
+ *    spacer, so creating it late would shift everything below it mid-scroll.
+ *    It writes scroll progress to a ref.
  * 2. Three.js is `await import()`ed, and only once the section is within a
  *    couple of viewports. Starting that at mount would defeat the dynamic
- *    import entirely — the component mounts during page load, so the library
- *    would land inside the initial page weight regardless of living in its own
- *    chunk. `dynamic({ ssr: false })` is the familiar way to express this and
- *    is rejected inside a Server Component in Next 16; this form needs no
- *    special casing and still server-renders the surrounding markup.
- *
- * The render loop reads the ref, so scrubbing and the swatch legend work
- * whether or not the shader has arrived yet.
+ *    import — the component mounts during page load, so the library would land
+ *    inside the initial page weight regardless of living in its own chunk.
  */
 export function FlooringSwapper() {
   const root = useRef<HTMLDivElement>(null);
@@ -123,10 +129,10 @@ export function FlooringSwapper() {
       // Start on the swatches and upgrade to photography as it arrives, rather
       // than starting on a texture that has not loaded and downgrading on
       // error. A texture whose image never resolves samples as black, so the
-      // error path would have to be flawless for the module to look right —
-      // this way there is no error path, and a missing plate stays a swatch.
+      // error path would have to be flawless for the module to look right.
       const fallbacks = FLOOR_OPTIONS.map((option) => solid(option.swatch));
       const loaded: import("three").Texture[] = [];
+      const geo = FLOORING_ROOM.floor;
 
       const material = new THREE.ShaderMaterial({
         vertexShader: FLOOR_VERTEX,
@@ -136,46 +142,87 @@ export function FlooringSwapper() {
           uTex0: { value: fallbacks[0] },
           uTex1: { value: fallbacks[1] },
           uTex2: { value: fallbacks[2] },
+          uRoom: { value: solid("#cccccc") },
           uProgress: { value: progress.current },
-          uRepeat: { value: new THREE.Vector2(4, 3) },
-          uAspect: { value: 1 },
-          uDepth: { value: 0.26 },
+          uRepeat: { value: new THREE.Vector2(geo.repeat[0], geo.repeat[1]) },
+          uInvFloor: { value: new THREE.Matrix3() },
+          uWallY: { value: geo.wallY },
+          uKinkX: { value: geo.kinkX },
+          uSlope: { value: geo.slope },
+          uPlateOffset: { value: new THREE.Vector2(0, 0) },
+          uPlateScale: { value: new THREE.Vector2(1, 1) },
+          uLightRef: { value: 0.5 },
         },
       });
 
       FLOOR_OPTIONS.forEach((option, i) => {
         loader.load(option.texture, (tex) => {
-          if (disposed) {
-            tex.dispose();
-            return;
-          }
+          if (disposed) return tex.dispose();
           tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
           material.uniforms[`uTex${i}`].value = tex;
           loaded.push(tex);
         });
       });
 
+      // The plate is loaded a second time here, as a texture, so the shader can
+      // read the room's own light. The browser serves it from cache — the
+      // <img> underneath has already requested it.
+      let plate: HTMLImageElement | null = null;
+      loader.load(FLOORING_ROOM.image, (tex) => {
+        if (disposed) return tex.dispose();
+        // Top-left origin, matching how the floor geometry is measured.
+        tex.flipY = false;
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        material.uniforms.uRoom.value = tex;
+        plate = tex.image as HTMLImageElement;
+        material.uniforms.uLightRef.value = floorLuminance(
+          plate,
+          geo.wallY,
+          geo.kinkX,
+          geo.slope,
+        );
+        loaded.push(tex);
+        project();
+      });
+
       scene.add(new THREE.Mesh(geometry, material));
+
+      /**
+       * Rebuild the screen-space projection. Depends on the canvas box and on
+       * the plate's aspect, so it has to run on every resize as well as when
+       * the plate finally arrives.
+       */
+      const project = () => {
+        const { clientWidth: w, clientHeight: h } = el;
+        if (!w || !h || !plate) return;
+
+        const cover = coverTransform(w, h, plate.naturalWidth, plate.naturalHeight);
+        const [nl, nr, fr, fl] = geo.quad.map((p) =>
+          toScreen(p as Point, cover),
+        ) as Point[];
+
+        const m = squareToQuad(nl, nr, fr, fl);
+        material.uniforms.uInvFloor.value
+          .set(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8])
+          .invert();
+
+        // The junction is measured in plate space, so it moves with the crop.
+        material.uniforms.uWallY.value =
+          geo.wallY * cover.scale[1] + cover.offset[1];
+        material.uniforms.uKinkX.value =
+          geo.kinkX * cover.scale[0] + cover.offset[0];
+        material.uniforms.uSlope.value =
+          (geo.slope * cover.scale[1]) / cover.scale[0];
+
+        material.uniforms.uPlateOffset.value.set(cover.offset[0], cover.offset[1]);
+        material.uniforms.uPlateScale.value.set(cover.scale[0], cover.scale[1]);
+      };
 
       const resize = () => {
         const { clientWidth: w, clientHeight: h } = el;
         if (!w || !h) return;
         renderer.setSize(w, h, false);
-        material.uniforms.uAspect.value = w / h;
-
-        // Plank scale is set in CSS pixels, not in tile counts. A fixed repeat
-        // keeps four planks across the canvas at every size, so on a phone each
-        // plank collapses to a smear; this holds a plank at roughly the same
-        // real width whatever the viewport.
-        material.uniforms.uRepeat.value.set(
-          Math.max(1.6, w / 330),
-          Math.max(1.4, h / 190),
-        );
-
-        // How hard the plane recedes. The full grazing angle needs vertical
-        // room; on a short canvas it crushes the far half into a few pixels,
-        // so ease off as the canvas gets shorter.
-        material.uniforms.uDepth.value = h < 240 ? 0.55 : 0.26;
+        project();
       };
       resize();
 
@@ -231,15 +278,14 @@ export function FlooringSwapper() {
       </div>
 
       <div className={styles.stage}>
-        <div className={styles.room}>
-          <Plate
-            src={FLOORING_ROOM.image}
-            alt={FLOORING_ROOM.alt}
-            sizes="(min-width: 960px) 90vw, 100vw"
-          />
-        </div>
-        {/* The floor plane. Sits over the lower band of the room, where the
-            floor is, so the walls and window light stay photographic. */}
+        {/* The untouched room. The canvas covers it exactly and repaints only
+            the floor, so everything else you see here is the original plate. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={FLOORING_ROOM.image}
+          alt={FLOORING_ROOM.alt}
+          className={styles.room}
+        />
         <canvas ref={canvas} className={styles.canvas} aria-hidden="true" />
       </div>
 

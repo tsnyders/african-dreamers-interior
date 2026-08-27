@@ -41,6 +41,16 @@ Scroll-narrative landing page + `/about` + `/contact`.
 - **Sections clear the header with `@include mix.below-header`**, never a
   hard-coded padding. The header is fixed, draws no space, and wraps to two rows
   on narrow viewports — SiteHeader publishes its measured height as `--header-h`.
+- **The flooring module is a composite, not an overlay.** The canvas sits over
+  the whole room plate and repaints only the floor, masked by the wall/floor
+  junction and mapped through a homography. The geometry that makes that work
+  lives in `FLOORING_ROOM.floor` in `lib/site.ts` and is measured *in the
+  plate* — **swap the room photo and you must re-measure it**, or the new floor
+  will sit at the wrong angle. Overlay a percentage grid on the image to read
+  the corners off (there is a recipe in the comment there).
+  The room plate is a plain `<img>`, not `next/image`, deliberately: the shader
+  loads the same URL and has to reproduce the browser's `object-fit: cover`
+  crop exactly, which an optimizer-resized variant would break.
 - **Cut-outs must use `<Plate bare>`**, which serves them `unoptimized`. Next's
   image optimizer flattens the alpha channel, so an optimized cut-out comes back
   as opaque RGB and renders as a rectangle.

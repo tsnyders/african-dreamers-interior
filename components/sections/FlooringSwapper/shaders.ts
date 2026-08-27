@@ -5,6 +5,10 @@
 // wall/floor junction are discarded, so the walls, window and garden stay the
 // original picture, untouched.
 //
+// Which pixels are floor comes from a matte built off the plate, not from a
+// line: furniture stands in front of the wall, so any straight junction paints
+// over its base and still misses the floor along the glazing.
+//
 // Inside the floor, each fragment is mapped through the inverse of a homography
 // (`uInvFloor`) taking a unit square onto a floor rectangle measured in the
 // plate. That is what makes the planks recede along the room's own perspective
@@ -34,6 +38,7 @@ export const FLOOR_FRAGMENT = /* glsl */ `
   uniform sampler2D uTex1;
   uniform sampler2D uTex2;
   uniform sampler2D uRoom;
+  uniform sampler2D uFloorMask;
 
   uniform float uProgress;
   uniform vec2 uRepeat;
@@ -41,11 +46,6 @@ export const FLOOR_FRAGMENT = /* glsl */ `
   // Inverse homography: screen -> floor. Built on the CPU from the measured
   // quad, already folded through the plate's object-fit: cover transform.
   uniform mat3 uInvFloor;
-
-  // The wall/floor junction in screen space, after that same transform.
-  uniform float uWallY;
-  uniform float uKinkX;
-  uniform float uSlope;
 
   // Where to sample the untouched plate, and the mean luminance of its floor so
   // the transferred lighting is centred on 1.0.
@@ -58,9 +58,11 @@ export const FLOOR_FRAGMENT = /* glsl */ `
   void main() {
     vec2 s = vec2(vUv.x, 1.0 - vUv.y);
 
-    // Everything above the junction is wall, window or garden. Leave it alone.
-    float junction = uWallY + max(0.0, s.x - uKinkX) * uSlope;
-    if (s.y < junction) discard;
+    // The matte says which pixels are floor. Anything else — wall, sofa, side
+    // table, door track, glazing, garden — is left as the original photograph.
+    vec2 plateUv = clamp((s - uPlateOffset) / uPlateScale, 0.0, 1.0);
+    float floorMask = texture2D(uFloorMask, plateUv).r;
+    if (floorMask < 0.04) discard;
 
     vec3 q = uInvFloor * vec3(s, 1.0);
     if (abs(q.z) < 1e-6) discard;
@@ -91,8 +93,7 @@ export const FLOOR_FRAGMENT = /* glsl */ `
 
     // Relight from the plate. Clamped so a blown highlight or a deep shadow
     // cannot drive the new material to pure white or black.
-    vec2 plateUv = (s - uPlateOffset) / uPlateScale;
-    vec3 room = texture2D(uRoom, clamp(plateUv, 0.0, 1.0)).rgb;
+    vec3 room = texture2D(uRoom, plateUv).rgb;
     float lum = dot(room, vec3(0.2126, 0.7152, 0.0722));
     // Eased back off full strength: at 1.0 a dark material in the shadowed
     // corner loses its grain entirely, which reads as a hole in the floor
@@ -104,10 +105,8 @@ export const FLOOR_FRAGMENT = /* glsl */ `
     float live = step(0.004, t) * step(t, 0.996);
     color = mix(color, vec3(1.0), smoothstep(0.0035, 0.0, abs(s.x - t)) * 0.5 * live);
 
-    // Soften the first pixels below the junction so the new floor meets the
-    // skirting instead of butting against it on a hard cut.
-    float seam = smoothstep(0.0, 0.012, s.y - junction);
-
-    gl_FragColor = vec4(color, seam);
+    // The matte is feathered a pixel, so it doubles as the alpha and the new
+    // floor meets the skirting without aliasing.
+    gl_FragColor = vec4(color, smoothstep(0.04, 0.55, floorMask));
   }
 `;

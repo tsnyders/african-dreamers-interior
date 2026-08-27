@@ -84,46 +84,47 @@ export function squareToQuad(q0: Point, q1: Point, q2: Point, q3: Point) {
 }
 
 /**
- * Mean luminance of the plate's floor.
+ * Mean luminance of the plate's floor, averaged over the matte.
  *
  * The shader relights the new material by the old floor's brightness; without a
  * reference the whole floor would be scaled by an arbitrary amount. Sampled on
- * a downscaled copy — this is a single average, not a texture.
+ * downscaled copies — this is a single average, not a texture.
  */
 export function floorLuminance(
   image: HTMLImageElement,
-  wallY: number,
-  kinkX: number,
-  slope: number,
+  mask: HTMLImageElement,
 ): number {
   const W = 96;
   const H = Math.max(1, Math.round((image.naturalHeight / image.naturalWidth) * W));
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return 0.5;
 
-  ctx.drawImage(image, 0, 0, W, H);
+  const read = (source: HTMLImageElement) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(source, 0, 0, W, H);
+    try {
+      return ctx.getImageData(0, 0, W, H).data;
+    } catch {
+      // A tainted canvas would throw. The plate is same-origin, so this is
+      // belt and braces; a neutral mid-grey keeps the relight from blowing the
+      // floor out.
+      return null;
+    }
+  };
+
+  const plate = read(image);
+  const matte = read(mask);
+  if (!plate || !matte) return 0.5;
+
   let total = 0;
   let count = 0;
-  try {
-    const { data } = ctx.getImageData(0, 0, W, H);
-    for (let y = 0; y < H; y++) {
-      const fy = (y + 0.5) / H;
-      for (let x = 0; x < W; x++) {
-        const fx = (x + 0.5) / W;
-        if (fy < wallY + Math.max(0, fx - kinkX) * slope) continue;
-        const i = (y * W + x) * 4;
-        total +=
-          (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
-        count++;
-      }
-    }
-  } catch {
-    // A tainted canvas would throw; the plate is same-origin, but a sensible
-    // mid-grey keeps the relight neutral rather than blowing the floor out.
-    return 0.5;
+  for (let i = 0; i < plate.length; i += 4) {
+    if (matte[i] < 128) continue;
+    total +=
+      (0.2126 * plate[i] + 0.7152 * plate[i + 1] + 0.0722 * plate[i + 2]) / 255;
+    count++;
   }
   return count ? total / count : 0.5;
 }

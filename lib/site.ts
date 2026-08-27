@@ -151,15 +151,20 @@ export const FLOORING_ROOM = {
   image: "/images/room-interior.webp",
   alt: "Bright minimal interior room with tall windows and a bare floor",
 
-  // Where the floor actually is in the photograph, as fractions of the plate
-  // with (0,0) at its top-left. This is what lets the shader paste a new floor
-  // into the room's own perspective and mask it to the real floor, instead of
-  // laying a rectangle over the lower half of the picture.
+  // Where the floor actually is in the photograph.
   //
-  // Re-measure these whenever the room plate changes. Overlay a percentage grid
-  // on the image and read off: the wall/floor line, where that line kinks to
-  // follow a receding wall, and four corners of a floor rectangle (the near
-  // pair may sit outside the frame — the mask clips them).
+  // The matte is a grown selection of the floor, built by tools/build-floor-mask.py
+  // — a straight junction line cannot work, because the sofa and table stand in
+  // front of the wall (their bases fall below any line and get painted over)
+  // while the floor along the glazing rises above it and gets missed.
+  //
+  // The quad is four corners of a floor rectangle, as fractions of the plate
+  // with (0,0) at its top-left, and gives the shader the room's perspective.
+  // The near pair sit outside the frame; the matte clips them.
+  //
+  // Re-measure BOTH whenever the room plate changes: overlay a percentage grid
+  // on the image to read the corners, then re-run the mask tool.
+  mask: "/images/room-interior-floor-mask.webp",
   floor: {
     /** Near-left, near-right, far-right, far-left. */
     quad: [
@@ -168,12 +173,6 @@ export const FLOORING_ROOM = {
       [0.62, 0.645],
       [0.045, 0.645],
     ],
-    /** Height of the back wall / floor junction. */
-    wallY: 0.645,
-    /** Beyond this x the junction rises to follow the window wall. */
-    kinkX: 0.62,
-    /** Rise per unit x past the kink. */
-    slope: 0.618,
     /** Plank tiling across the floor rectangle: (across, into the room). */
     repeat: [5, 8],
   },

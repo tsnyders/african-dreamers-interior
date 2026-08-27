@@ -20,10 +20,10 @@ import styles from "./FlooringSwapper.module.scss";
  * are judged in the same room under the same light.
  *
  * The floor is *replaced*, not covered. The canvas sits over the whole plate,
- * but the shader discards everything above the wall/floor junction and pastes
- * the new material through a homography built from the floor corners measured
- * in `FLOORING_ROOM.floor`, then relights it from the photograph itself. Walls,
- * window and garden are never drawn over.
+ * but the shader paints only where a matte says there is floor, pastes the new
+ * material through a homography built from the corners measured in
+ * `FLOORING_ROOM.floor`, and relights it from the photograph itself. The walls,
+ * the sofa, the side table, the door track and the garden are never drawn over.
  *
  * Two lifecycles, deliberately kept apart:
  *
@@ -143,12 +143,10 @@ export function FlooringSwapper() {
           uTex1: { value: fallbacks[1] },
           uTex2: { value: fallbacks[2] },
           uRoom: { value: solid("#cccccc") },
+          uFloorMask: { value: solid("#000000") },
           uProgress: { value: progress.current },
           uRepeat: { value: new THREE.Vector2(geo.repeat[0], geo.repeat[1]) },
           uInvFloor: { value: new THREE.Matrix3() },
-          uWallY: { value: geo.wallY },
-          uKinkX: { value: geo.kinkX },
-          uSlope: { value: geo.slope },
           uPlateOffset: { value: new THREE.Vector2(0, 0) },
           uPlateScale: { value: new THREE.Vector2(1, 1) },
           uLightRef: { value: 0.5 },
@@ -168,6 +166,12 @@ export function FlooringSwapper() {
       // read the room's own light. The browser serves it from cache — the
       // <img> underneath has already requested it.
       let plate: HTMLImageElement | null = null;
+      let matte: HTMLImageElement | null = null;
+      const relight = () => {
+        if (!plate || !matte) return;
+        material.uniforms.uLightRef.value = floorLuminance(plate, matte);
+      };
+
       loader.load(FLOORING_ROOM.image, (tex) => {
         if (disposed) return tex.dispose();
         // Top-left origin, matching how the floor geometry is measured.
@@ -175,14 +179,19 @@ export function FlooringSwapper() {
         tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
         material.uniforms.uRoom.value = tex;
         plate = tex.image as HTMLImageElement;
-        material.uniforms.uLightRef.value = floorLuminance(
-          plate,
-          geo.wallY,
-          geo.kinkX,
-          geo.slope,
-        );
         loaded.push(tex);
+        relight();
         project();
+      });
+
+      loader.load(FLOORING_ROOM.mask, (tex) => {
+        if (disposed) return tex.dispose();
+        tex.flipY = false;
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        material.uniforms.uFloorMask.value = tex;
+        matte = tex.image as HTMLImageElement;
+        loaded.push(tex);
+        relight();
       });
 
       scene.add(new THREE.Mesh(geometry, material));
@@ -205,14 +214,6 @@ export function FlooringSwapper() {
         material.uniforms.uInvFloor.value
           .set(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8])
           .invert();
-
-        // The junction is measured in plate space, so it moves with the crop.
-        material.uniforms.uWallY.value =
-          geo.wallY * cover.scale[1] + cover.offset[1];
-        material.uniforms.uKinkX.value =
-          geo.kinkX * cover.scale[0] + cover.offset[0];
-        material.uniforms.uSlope.value =
-          (geo.slope * cover.scale[1]) / cover.scale[0];
 
         material.uniforms.uPlateOffset.value.set(cover.offset[0], cover.offset[1]);
         material.uniforms.uPlateScale.value.set(cover.scale[0], cover.scale[1]);

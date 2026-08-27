@@ -42,12 +42,15 @@ Scroll-narrative landing page + `/about` + `/contact`.
   hard-coded padding. The header is fixed, draws no space, and wraps to two rows
   on narrow viewports — SiteHeader publishes its measured height as `--header-h`.
 - **The flooring module is a composite, not an overlay.** The canvas sits over
-  the whole room plate and repaints only the floor, masked by the wall/floor
-  junction and mapped through a homography. The geometry that makes that work
-  lives in `FLOORING_ROOM.floor` in `lib/site.ts` and is measured *in the
-  plate* — **swap the room photo and you must re-measure it**, or the new floor
-  will sit at the wrong angle. Overlay a percentage grid on the image to read
-  the corners off (there is a recipe in the comment there).
+  the whole room plate and repaints only the floor: where to paint comes from a
+  matte (`room-interior-floor-mask.webp`), and the perspective from a homography
+  built off `FLOORING_ROOM.floor` in `lib/site.ts`.
+  A straight junction line does **not** work — furniture stands in front of the
+  wall, so its base falls below any such line and gets painted over, while the
+  floor along the glazing rises above it and gets missed.
+  **Swap the room photo and you must redo both**: re-measure the quad (overlay a
+  percentage grid; recipe is in the comment there) and re-run
+  `python tools/build-floor-mask.py`.
   The room plate is a plain `<img>`, not `next/image`, deliberately: the shader
   loads the same URL and has to reproduce the browser's `object-fit: cover`
   crop exactly, which an optimizer-resized variant would break.

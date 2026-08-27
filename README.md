@@ -1,5 +1,7 @@
 # African Dreamers Interior
 
+**Live:** https://african-dreamers-interior.vercel.app
+
 An animated flagship landing page for an interior design studio — a scroll-driven
 narrative in ivory stone and Montserrat, built to the studio's PRD.
 
